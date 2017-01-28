@@ -3,6 +3,7 @@ package com.mblub.pit;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.io.PrintStream;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
@@ -26,11 +27,13 @@ import com.mblub.util.io.stream.StreamingLineNumberReader.NumberedLine;
 
 public class CommentTagMutationFilterFactory implements MutationFilterFactory {
 
+  private static final String SUPPRESS_ALL = "ALL";
   private static final Pattern SUPPRESSION_COMMENT_PATTERN = Pattern.compile("//\\s*@suppressMutation\\((.*)\\)");
+  private static final String GREGOR_MUTATOR_PREFIX = "org.pitest.mutationtest.engine.gregor.mutators.";
 
   @Override
   public String description() {
-    return "CommentTagMutationFilterFactory (v23)";
+    return "CommentTagMutationFilterFactory (v26)";
   }
 
   @Override
@@ -79,14 +82,27 @@ public class CommentTagMutationFilterFactory implements MutationFilterFactory {
       if (suppressionTargets == null || suppressionTargets.isEmpty()) {
         return true;
       }
-      boolean isSuppressed = suppressionTargets.stream().anyMatch(t -> t.getNumber() == details.getLineNumber());
+      boolean isSuppressed = suppressionTargets.stream().anyMatch(t -> t.getNumber() == details.getLineNumber()
+              && (SUPPRESS_ALL.equals(t.getLine()) || details.getMutator().endsWith(t.getLine())));
       if (isSuppressed) {
-        System.out.println("Suppressing mutation in " + details.getClassName() + ", line " + details.getLineNumber()
-                + ": " + details.getDescription());
+        reportSuppression(System.out, details);
       }
       return !isSuppressed;
     }
 
+    private void reportSuppression(PrintStream ps, MutationDetails details) {
+      ps.print("Suppressing mutation in ");
+      ps.print(details.getClassName());
+      ps.print(", line ");
+      ps.print(details.getLineNumber());
+      ps.print(": ");
+      ps.print(details.getMutator().startsWith(GREGOR_MUTATOR_PREFIX)
+              ? details.getMutator().substring(GREGOR_MUTATOR_PREFIX.length()) : details.getMutator());
+      ps.print(" (would have ");
+      ps.print(details.getDescription());
+      ps.print(").");
+      ps.println();
+      ps.flush();
+    }
   }
-
 }

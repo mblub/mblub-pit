@@ -81,7 +81,7 @@ public class StreamingLineNumberReader extends LineNumberReader {
 
     @Override
     public String toString() {
-      return number + ":\t" + line;
+      return number + ": " + line;
     }
   }
 }
